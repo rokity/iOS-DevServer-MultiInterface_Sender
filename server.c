@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <stdlib.h>
 
 int socket_client_mac;
 void initCLientSocket()
 {
-     int SERVER_PORT = 2001;
+    int SERVER_PORT = 2001;
     struct sockaddr_in server_address;
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
@@ -44,19 +44,14 @@ void initCLientSocket()
 
         printf("client connected with ip address: %s\n",
                inet_ntoa(client_address.sin_addr));
-
     }
 }
-
-
 
 void sendBufferToClientMac(char buffer[])
 {
     size_t len = strlen(buffer);
     send(socket_client_mac, buffer, len, 0);
 }
-
-
 
 void serverIphone()
 {
@@ -95,34 +90,51 @@ void serverIphone()
         }
 
         int n = 0;
-        int len = 0, maxlen = 100;
+        int len = 0, maxlen = 1;
         char buffer[maxlen];
-        char *pbuffer = buffer;
 
         printf("client connected with ip address: %s\n",
                inet_ntoa(client_address.sin_addr));
+        int count = 0;
+        FILE *write_ptr;
 
+        write_ptr = fopen("foto.jpg", "wb");
+        char content[60030];
         // keep running as long as the client keeps the connection open
-        while ((n = recv(sock, pbuffer, maxlen, 0)) > 0)
+        while ((n = recv(sock, buffer, maxlen, 0)))
         {
-            pbuffer += n;
-            maxlen -= n;
-            len += n;
+            content[count]= buffer[0];
+            printf("%s", buffer);
+            printf("\n");
+            count++;
+            //printf("received: '%s'\n", buffer);
+        }
+        if (n == 0)
+        {
+            puts("Client disconnected");
+            printf("%s", content);
+            char str[12];
+            sprintf(str, "%d", count);
+            puts(str);
+            // w for write, b for binary
 
-            printf("received: '%s'\n", buffer);
-            sendBufferToClientMac(buffer);
-            // echo received content back
-            
+            fwrite(content, sizeof(content), 1, write_ptr);
+            fclose(write_ptr);
+            puts("file scritto");
+            // puts(count);
+            //fflush(stdin);
+        }
+        else if (n == -1)
+        {
+            perror("recv failed");
         }
 
-        close(sock);
+        //printf('%d', count);
+
+        //close(sock);
     }
-    close(listen_sock);
+    //close(listen_sock);
 }
-
-
-
-
 
 int main(int argc, char *argv[])
 {
