@@ -8,7 +8,7 @@
 
 void listenFromServer()
 {
-    const char *server_name = "192.168.1.103";
+    const char *server_name = "127.0.0.1";
     const int server_port = 2001;
 
     struct sockaddr_in server_address;

@@ -5,16 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <pthread.h> 
-
+#include <stdio.h>
+#include <stdlib.h>
 
 int socket_client_mac;
 
 void initCLientSocket()
 {
-    printf("true");
+
     int SERVER_PORT = 2001;
     struct sockaddr_in server_address;
     memset(&server_address, 0, sizeof(server_address));
@@ -22,18 +20,18 @@ void initCLientSocket()
     server_address.sin_port = htons(SERVER_PORT);
     server_address.sin_addr.s_addr = htonl(INADDR_ANY);
     int listen_sock;
-    printf("true");
+
     if ((listen_sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("could not create listen socket\n");
     }
-    printf("true");
+
     if ((bind(listen_sock, (struct sockaddr *)&server_address,
               sizeof(server_address))) < 0)
     {
-        printf("could not bind socket\n");
+        printf("initCLientSocket could not bind socket\n");
     }
-    printf("true");
+
     int wait_size = 100000;
     if (listen(listen_sock, wait_size) < 0)
     {
@@ -41,9 +39,11 @@ void initCLientSocket()
     }
     struct sockaddr_in client_address;
     int client_address_len = 0;
-    while (true)
+    while ((socket_client_mac =
+                 accept(listen_sock, (struct sockaddr *)&client_address,
+                        &client_address_len)) < 0)
     {
-        printf("true");
+
         // open a new socket to transmit data per connection
         if ((socket_client_mac =
                  accept(listen_sock, (struct sockaddr *)&client_address,
@@ -52,9 +52,10 @@ void initCLientSocket()
             printf("could not open a socket to accept data\n");
         }
 
-        printf("client connected with ip address: %s\n",
-               inet_ntoa(client_address.sin_addr));
+        
     }
+    printf("client connected with ip address: %s\n",
+               inet_ntoa(client_address.sin_addr));
 }
 
 void sendBufferToClientMac(char buffer[])
@@ -63,8 +64,9 @@ void sendBufferToClientMac(char buffer[])
     send(socket_client_mac, buffer, 1, 0);
 }
 
-void *serverIphone(void *vargp)
+void serverIphone()
 {
+    printf("serverIphone");
     int SERVER_PORT = 2000;
     struct sockaddr_in server_address;
     memset(&server_address, 0, sizeof(server_address));
@@ -79,7 +81,7 @@ void *serverIphone(void *vargp)
     if ((bind(listen_sock, (struct sockaddr *)&server_address,
               sizeof(server_address))) < 0)
     {
-        printf("could not bind socket\n");
+        printf("serverIphone could not bind socket\n");
     }
     int wait_size = 1000;
     if (listen(listen_sock, wait_size) < 0)
@@ -105,8 +107,7 @@ void *serverIphone(void *vargp)
 
         printf("client connected with ip address: %s\n",
                inet_ntoa(client_address.sin_addr));
-       
-        
+
         // keep running as long as the client keeps the connection open
         while ((n = recv(sock, buffer, maxlen, 0)))
         {
@@ -116,6 +117,7 @@ void *serverIphone(void *vargp)
         if (n == 0)
         {
             puts("Client disconnected");
+            close(socket_client_mac);
             // printf("%s", content);
             // char str[12];
             // sprintf(str, "%d", count);
@@ -138,15 +140,12 @@ void *serverIphone(void *vargp)
         //close(sock);
     }
     //close(listen_sock);
-    return NULL;
 }
 
 int main(int argc, char *argv[])
 {
-    pthread_t thread_server_iphone; 
-    pthread_create(&thread_server_iphone, NULL, serverIphone, NULL);
-    printf("ciao");
     initCLientSocket();
+    serverIphone();
     while (true)
     {
     }
