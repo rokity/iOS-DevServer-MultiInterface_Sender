@@ -5,11 +5,30 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-void listenFromServer()
+#define NUM_THREADS 2
+char content[60030];
+int flag_finish = 0;
+
+void finish()
 {
-    const char *server_name = "127.0.0.1";
-    const int server_port = 2001;
+    flag_finish++;
+}
+
+void *listenFromServer(void *args)
+{
+    const char *server_name = "18.191.173.32";
+    const int server_port = 3306;
 
     struct sockaddr_in server_address;
     memset(&server_address, 0, sizeof(server_address));
@@ -28,7 +47,6 @@ void listenFromServer()
     if ((sock = socket(PF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("could not create socket\n");
-         
     }
 
     // TCP is connection oriented, a reliable connection
@@ -37,52 +55,77 @@ void listenFromServer()
                 sizeof(server_address)) < 0)
     {
         printf("could not connect to server\n");
-         
     }
 
     // receive
 
     int n = 0;
-    int count = 0, maxlen = 1;
-    char buffer[maxlen];
-    char content[60030];
-
-    FILE *write_ptr;
-    write_ptr = fopen("foto.jpg", "wb");
-    
-    // will remain open until the server terminates the connection
-    while ((n = recv(sock, buffer, maxlen, 0)) > 0)
+    int len = 3;
+    unsigned char bufferChunk[len];
+    unsigned char chunk[2];
+    unsigned int chunkID;
+    int i = 0;
+    while (((n = recv(sock, bufferChunk, len, 0)) > 0))
     {
-        content[count]= buffer[0];
-        count++;
-        printf("received: '%s'\n", buffer);
+
+        for (i = 0; i < 2; i++)
+        {
+            chunk[i] = bufferChunk[i + 1];
+        }
+        printf("faccio memcpy");
+        memcpy(&chunkID, &chunk, 2);
+        printf("memcpy finito");
+        printf("salvo carattere");
+        content[chunkID] = bufferChunk[0];
+        printf("finito salvataggio carattere");
+        // printf("chunk server\n");
+        // printf("%d", chunkID);
+        // printf("\n");
     }
+
     if (n == 0)
-        {
-            puts("Client disconnected");
-            printf("%s", content);
-            char str[12];
-            sprintf(str, "%d", count);
-            puts(str);
-            // w for write, b for binary
+    {
+        puts("Client disconnected server");
+        printf("%s", content);
+        finish();
 
-            fwrite(content, sizeof(content), 1, write_ptr);
-            fclose(write_ptr);
-            puts("file scritto");
-            // puts(count);
-            //fflush(stdin);
-        }
-        else if (n == -1)
-        {
-            perror("recv failed");
-        }
-
+    }
+    else if (n == -1)
+    {
+        perror("recv failed");
+    }
+    close(sock);
+    pthread_exit(NULL);
 }
+
+
 
 int main(int argc, char *argv[])
 {
-    listenFromServer();
-    while (true)
+    // pthread_t threads[NUM_THREADS];
+    pthread_t threads;
+    pthread_create(&threads, NULL, listenFromServer, NULL);
+    // for (int i = 0; i < NUM_THREADS; i++)
+    // {
+    //     if (i == 0)
+    //         pthread_create(&threads[0], NULL, listenFromServer, NULL);
+    //     else
+    //         pthread_create(&threads[1], NULL, listenFromIphone, NULL);
+            
+    // }
+    // for (int i = 0; i < 2; i++)
+    //    pthread_join(threads[i], NULL);
+    pthread_join(threads, NULL);
+    while (flag_finish < 1)
     {
     }
+    puts("file scritto server");
+    exit(0);
+
+    // printf("finish");
+    // FILE *write_ptr;
+    // write_ptr = fopen("foto.jpg", "wb");
+    // fwrite(content, sizeof(content), 1, write_ptr);
+    // fclose(write_ptr);
+    // puts("file scritto");
 }
